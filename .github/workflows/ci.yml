@@ -1,0 +1,108 @@
+name: CI - TrAcEs (Integração Contínua)
+run-name: "CI - TrAcEs (${{ inputs.motivo || github.ref_name }})"
+
+# ==============================================================================
+# TrAcEs — Trilha de Acompanhamento Estudantil
+# Entregável Parcial 1 (EP1) — Disciplina: Projeto Integrado 4 (Integração de Sistemas)
+# Pipeline de Integração Contínua (CI) via GitHub Actions
+# ==============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  # Permite disparar o pipeline manualmente (aba Actions ou "gh workflow run")
+  workflow_dispatch:
+    inputs:
+      motivo:
+        description: "Motivo da execução manual (opcional)"
+        required: false
+        default: "Validação manual sob demanda"
+
+# Cancela execuções concorrentes anteriores na mesma branch/PR para economizar recursos
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Princípio do menor privilégio: o pipeline apenas lê o código (não escreve no repositório)
+permissions:
+  contents: read
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # Job 1: Backend CI — Validação de Regras de Negócio e Suíte de Testes
+  # ----------------------------------------------------------------------------
+  backend-ci:
+    name: "Backend CI (Testes Pytest & Isolamento SQLite)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Clonar o repositório (Checkout)
+        uses: actions/checkout@v5
+
+      - name: Configurar o ambiente Python 3.12 com Cache do Pip
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "backend/requirements.txt"
+
+      - name: Atualizar pip e instalar dependências do backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Verificação de compilação sintática do backend (build check)
+        run: |
+          python -m compileall -q backend/src backend/main.py
+
+      - name: Executar suíte de testes automatizados com Pytest
+        run: |
+          python -m pytest -v --junitxml=reports/pytest-results.xml
+
+      - name: Persistir relatório de testes (JUnit XML) como Artefato
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: pytest-results-report
+          path: reports/pytest-results.xml
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ----------------------------------------------------------------------------
+  # Job 2: Frontend CI — Validação de Dependências e Build de Produção Vite
+  # ----------------------------------------------------------------------------
+  frontend-ci:
+    name: "Frontend CI (Instalação Determinística & Build Vite)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Clonar o repositório (Checkout)
+        uses: actions/checkout@v5
+
+      - name: Configurar o ambiente Node.js 22.20.0 com Cache do NPM
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22.20.0"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Instalação determinística de dependências (npm ci)
+        run: npm ci
+
+      - name: Verificação de tipos TypeScript (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Compilação do bundle de produção (Vite Build / esbuild)
+        run: npm run build
