@@ -463,6 +463,47 @@ O desenvolvimento do processo de Integração Contínua (CI) com GitHub Actions 
   ○ Autoria integral do texto didático e pedagógico da seção do **Componente Extensionista** (Seção 2 do `README.md`), democratizando os conceitos de Integração Contínua através de metáforas acessíveis voltadas a estudantes em fase inicial da UFCA e comunidade externa do Cariri cearense.
   ○ Estruturação da documentação técnica oficial ([`README.md`](file:///README.md) e [`RELATORIO_FINAL_PI4_EP1.md`](file:///RELATORIO_FINAL_PI4_EP1.md)), elaboração da matriz de rastreabilidade dos requisitos acadêmicos da disciplina integrada de Integração de Sistemas e auditoria estrita de conformidade com as regras de formatação do *markdownlint*.
 
+#### 8.1.1 Avaliação Reflexiva de Desempenho e Contribuição Individual
+
+Em consonância com as boas práticas pedagógicas de autoavaliação e avaliação por pares preconizadas na disciplina, a seguir registram-se as reflexões analíticas sobre a atuação individual de cada membro da equipe durante o desenvolvimento do EP1:
+
+##### 👤 Avaliação de Desempenho: Antonio Alex Dayson Tomaz
+
+- **O membro cumpriu suas tarefas e contribuiu ativamente para as entregas combinadas?**  
+  **Sim, plenamente.** Antonio Alex Dayson Tomaz assumiu e entregou a totalidade dos itens sob sua responsabilidade dentro dos prazos pactuados. Liderou a modelagem e implementação do workflow `.github/workflows/ci.yml`, a parametrização do runner Ubuntu, o provisionamento do ambiente Python 3.12 com cache de dependências e a criação do orquestrador local `scripts/ci_local.py`. Sua proatividade garantiu que o pipeline estivesse operacional e testado antes mesmo das etapas finais de consolidação da documentação.
+
+- **O membro participou das discussões, reuniões e decisões da equipe de forma consistente?**  
+  **Sim, com presença constante e contribuição propositiva.** Participou de todas as sessões de alinhamento e pair programming, auxiliando na definição estratégica da arquitetura de jobs desacoplados (`backend-ci` e `frontend-ci`), na política de concorrência com cancelamento de builds redundantes e na escolha da suíte Pytest com isolamento rigoroso de banco de dados, sempre expondo argumentos técnicos fundamentados na literatura e nas diretrizes do edital.
+
+- **O membro entregou resultados de qualidade e dentro do esperado pela equipe?**  
+  **Sim, com padrão de qualidade técnica superior.** Todos os 79 testes automatizados foram validados com 100% de aprovação sem dependências externas ou efeitos colaterais em disco, a compilação via `compileall` foi integrada com precisão e o relatório JUnit XML (`reports/pytest-results.xml`) foi homologado e publicado como artefato no GitHub Actions sem nenhuma falha estrutural.
+
+- **O membro demonstrou disposição para ajudar os colegas e colaborar na solução de problemas?**  
+  **Sim, de maneira exemplar.** Demonstrou prontidão para sanar dúvidas e resolver gargalos técnicos complexos, como o mapeamento correto do `pythonpath` no runner Linux do GitHub Actions e o suporte à parametrização do ambiente Node.js do frontend, atuando como um facilitador técnico colaborativo durante todo o ciclo de integração.
+
+- **O membro manteve uma postura respeitosa, com comunicação clara e assertiva durante o projeto?**  
+  **Sim, com conduta profissional e comunicação transparente.** Manteve diálogo claro, cortês e objetivo em todas as fases, documentando suas decisões técnicas de forma explícita, acolhendo ponderações e mantendo um clima de trabalho harmônico, focado na excelência e no sucesso coletivo do entregável.
+
+---
+
+##### 👤 Avaliação de Desempenho: Maria Alexsandra Tomaz
+
+- **O membro cumpriu suas tarefas e contribuiu ativamente para as entregas combinadas?**  
+  **Sim, de forma exemplar e pontual.** Maria Alexsandra Tomaz cumpriu integralmente todas as metas assumidas para o EP1, responsabilizando-se pela estruturação completa do job `frontend-ci` com Node.js 22 e cache de NPM, configuração dos scripts de validação estática de tipos (`tsc --noEmit`), build de produção com Vite, redação primorosa do Componente Extensionista e harmonização do relatório técnico final.
+
+- **O membro participou das discussões, reuniões e decisões da equipe de forma consistente?**  
+  **Sim, com engajamento contínuo e papel decisivo.** Esteve presente em todas as deliberações técnicas, trazendo contribuições essenciais sobre a experiência do usuário, padronização semântica de commits, estruturação pedagógica das instruções do README e governança de acessibilidade conceitual para que o componente extensionista realmente dialogasse com discentes iniciantes e com a comunidade externa.
+
+- **O membro entregou resultados de qualidade e dentro do esperado pela equipe?**  
+  **Sim, superando as expectativas em rigor e acabamento.** A esteira do frontend foi construída com validação estática estrita de contratos de tipo TypeScript (0 erros), garantindo que os 3.682 módulos fossem transformados e empacotados com sucesso no Vite. Além disso, conduziu a auditoria de formatação do projeto, resolvendo todos os 225 apontamentos de *markdownlint* e assegurando um relatório acadêmico de altíssimo nível visual e estrutural.
+
+- **O membro demonstrou disposição para ajudar os colegas e colaborar na solução de problemas?**  
+  **Sim, com grande espírito de equipe e proatividade.** Auxiliou ativamente na organização dos artefatos de evidência, na compatibilização dos comandos de build entre ambientes Windows e Linux e na revisão cruzada dos requisitos do edital, demonstrando flexibilidade e foco na resolução conjunta das dificuldades encontradas durante a homologação do pipeline.
+
+- **O membro manteve uma postura respeitosa, com comunicação clara e assertiva durante o projeto?**  
+  **Sim, mantendo elevado padrão ético e comunicativo.** Destacou-se pela empatia, clareza na exposição de ideias e assertividade na revisão dos textos e instruções de execução. Manteve um ambiente colaborativo e estimulante, assegurando que todas as decisões fossem tomadas em consenso e com rigor acadêmico.
+
+
 As evidências complementares **07 a 13** (autoria dos commits, divisão de responsabilidades, testes do backend, Swagger/OpenAPI, interface SPA, build/typecheck e runner local) estão catalogadas em [`docs/assets/ci/LEIA-ME-EVIDENCIAS.md`](docs/assets/ci/LEIA-ME-EVIDENCIAS.md).
 
 ### 8.2 Uso do GitHub, Estratégia de Versionamento e Governança de CI
@@ -498,6 +539,38 @@ O repositório do projeto no GitHub atua como eixo central de integração cont�
 ● **Rastreabilidade Histórica dos Entregáveis da Trilha:**
   ○ Organização cronológica e versionamento de todas as etapas anteriores do projeto em diretórios preservados (`docs/pi2-ep2/`, `docs/pi2-ep3/`, `docs/pi3-ep1/`, `docs/pi3-ep2/`, `docs/pi3-ep3/` e `docs/assets/`), garantindo auditabilidade da evolução arquitetural do TrAcEs.
 
+
+---
+
+### 8.3 Uso Transparente de Ferramentas de Inteligência Artificial Generativa (Pergunta 6 do Roteiro)
+
+Em estrita consonância com a integridade acadêmica e as diretrizes pedagógicas da Universidade Federal do Cariri (UFCA), a equipe declara de forma transparente que utilizou a ferramenta de Inteligência Artificial Generativa **Gemini 3.8 Flash** exclusivamente como instrumento secundário de apoio (revisão textual de metáforas didáticas, consulta a mensagens de advertência de linters e auxílio sintático pontual). Todo o projeto arquitetural, a concepção do pipeline, o isolamento do banco SQLite, a escrita dos 79 testes automatizados e o raciocínio crítico foram conduzidos de forma autônoma pelos discentes Antonio Alex Dayson Tomaz e Maria Alexsandra Tomaz.
+
+A seguir, apresentam-se os três casos mais relevantes de consulta à ferramenta durante o EP1, contemplando a avaliação crítica da equipe e a correção de limitações:
+
+#### 1. Apoio na Revisão Textual do Componente Extensionista (Modificada pela Equipe)
+- **Ferramenta e objetivo:** Gemini 3.8 Flash; objetivo de apoiar a revisão estilística e concisão de vocabulário da redação inicial do Componente Extensionista (Seção 2 do `README.md`).
+- **Descrição da solicitação:** A equipe submeteu uma versão preliminar da explicação de CI e solicitou sugestões para tornar a linguagem mais acessível para alunos ingressantes da UFCA sem perda de precisão técnica.
+- **Principal sugestão da IA:** A ferramenta propôs uma analogia extensa comparando o pipeline de CI ao trabalho de revisão ortográfica e editoração de livros em uma editora comercial.
+- **Avaliação crítica da equipe:** A equipe avaliou que a analogia com editoração de livros era excessivamente abstrata para discentes de graduação tecnológica em ADS. Alunos de programação precisam de um paralelo prático com verificação contínua e reprodutibilidade de software.
+- **Decisão adotada:** **Modificada com autonomia discente**. A metáfora de editora foi rejeitada, mantendo-se a analogia formulada pela equipe da "esteira automatizada de controle de qualidade". Da resposta da IA, a equipe aproveitou apenas a sugestão de enxugar orações subordinadas longas e traduzir expressões em inglês (*fail-fast*, *build breaks*) para termos em português direto.
+- **Fundamentação da decisão:** Princípios de extensão universitária voltados à comunidade do Cariri e diretrizes de acessibilidade conceitual inspiradas nas heurísticas de usabilidade de Nielsen (1994).
+
+#### 2. Consulta sobre Cache e Gerenciador de Pacotes no CI (Inadequada / Rejeitada e Corrigida pela Equipe)
+- **Ferramenta e objetivo:** Gemini 3.8 Flash; objetivo de pesquisar opções de otimização de cache para dependências do frontend no GitHub Actions.
+- **Descrição da solicitação:** A equipe questionou como acelerar o download e instalação de dependências da SPA React/Vite no job `frontend-ci` em runners `ubuntu-24.04`.
+- **Principal recomendação fornecida pela IA:** A ferramenta recomendou a utilização do gerenciador PNPM com o comando `pnpm install --frozen-lockfile` e a action `setup-node` com `cache: 'pnpm'`, ou, caso permanecesse no NPM, utilizar `npm install`.
+- **Avaliação crítica da equipe (Identificação da Falha):** A recomendação da IA foi **inadequada, genérica e causaria falha crítica no pipeline**. A ferramenta desconsiderou a realidade concreta do projeto, que versiona exclusivamente o `package-lock.json` do NPM (não existindo `pnpm-lock.yaml`). Além disso, sugerir `npm install` em CI é um erro conceitual grave, pois esse comando pode alterar dependências transitivas de forma não determinística e desconsiderar o lockfile estrito.
+- **Decisão adotada:** **Rejeitada categoricamente e corrigida pela equipe**. A equipe aplicou a boa prática oficial da Engenharia de Software Moderna: configurou o cache nativo do NPM indexado em `frontend/package-lock.json` e adotou estritamente o comando `npm ci`. O `npm ci` garante compilações determinísticas, idempotentes e falha defensivamente caso haja qualquer divergência entre dependências declaradas e travadas.
+- **Fundamentação da decisão:** Conceito de *Reproducible Builds* e determinismo em Integração Contínua (Humble & Farley, 2010); especificação técnica do NPM CLI para ambientes de automação.
+
+#### 3. Diagnóstico de Advertência Sintática do Linter de Markdown (Aceita pela Equipe)
+- **Ferramenta e objetivo:** Gemini 3.8 Flash; objetivo de esclarecer o critério formal da regra `MD029/ol-prefix` disparada pelo *markdownlint* em listas com blocos de código.
+- **Descrição da solicitação:** A equipe apresentou o trecho do arquivo `docs/GUIA_COMMITS_AUTORIA.md` onde o analisador apontava discrepância na numeração ordenada após um bloco de código shell identado.
+- **Principal recomendação fornecida pela IA:** A IA explicou que o analisador léxico do linter interpreta que blocos de código não identados com 4 espaços quebram o fluxo do item de lista anterior, fazendo com que o item posterior seja interpretado como o início de uma nova lista que deveria recomeçar com o prefixo `1.`.
+- **Avaliação crítica da equipe:** A explicação foi pertinente e condizente com a especificação formal do analisador sintático do CommonMark.
+- **Decisão adotada:** **Aceita**. A equipe discente aplicou a correção na indentação dos blocos e padronizou os prefixos, eliminando os apontamentos sem alterar o conteúdo técnico do guia.
+- **Fundamentação da decisão:** Especificação do padrão CommonMark para blocos estruturados e documentação técnica da ferramenta *markdownlint-cli*.
 
 ---
 

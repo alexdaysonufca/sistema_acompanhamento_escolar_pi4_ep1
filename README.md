@@ -18,7 +18,7 @@
 **Curso:** Análise e Desenvolvimento de Sistemas  
 **Estudantes:** Antonio Alex Dayson Tomaz e Maria Alexsandra Tomaz  
 **Data:** 02/11/2026  
-**Status do Projeto:** ✅ Pipeline de CI **aprovado no GitHub Actions** (79 testes, `tsc --noEmit` e build Vite verdes) · Execução sob demanda via `workflow_dispatch` e runner local `scripts/ci_local.py` · Clean Architecture 4 Camadas · Monorepo Desacoplado
+**Status do Projeto:** ✅ **100% Funcional e Homologado no GitHub Actions** (Pipeline CI Verde · 79 Testes Pytest Aprovados · `tsc --noEmit` e Build Vite Homologados · Relatório JUnit XML Persistido via `actions/upload-artifact@v6` · Executor Local `ci_local.py`) · Clean Architecture 4 Camadas · Monorepo Desacoplado
 
 **Documentação Complementar:** [Plano de Ação do EP1](PLANO_DE_ACAO_PI4_EP1.md) · [Relatório Técnico Final de Atendimento aos Requisitos](RELATORIO_FINAL_PI4_EP1.md)
 
@@ -26,7 +26,7 @@
 
 ## 🚀 1. Integração Contínua (CI) com GitHub Actions
 
-O **Entregável Parcial 1 (EP1)** da disciplina de Projeto Integrado 4 (Integrada com *Integração de Sistemas*) implementa a automação completa do ciclo de integração de código através do **GitHub Actions**. O objetivo é assegurar que todas as alterações submetidas ao repositório sejam checadas automaticamente contra erros de lógica, quebras de compilação e regressões de funcionalidades.
+O **TrAcEs** adota um pipeline profissional e automatizado de **Integração Contínua (CI — *Continuous Integration*)** implementado via **GitHub Actions** ([`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml)) no **Entregável Parcial 1 (EP1)** das disciplinas de Projeto Integrado 4 e Integração de Sistemas. O objetivo primordial é atuar como guardião da integridade da base de código a cada novo commit ou pull request nas branches `main` e `master`, assegurando que todas as alterações sejam checadas automaticamente contra erros de lógica, quebras de compilação, tipos divergentes e regressões de funcionalidades.
 
 ### 1.1 Diagrama do Pipeline de CI (`.github/workflows/ci.yml`)
 
@@ -39,27 +39,36 @@ flowchart TD
         GitPR["Pull Request para main / master"]
     end
 
-    Trigger --> Concurrency["Controle de Concorrência (Cancelamento de Builds Obsoletos)"]
+    GitPush --> Concurrency["Controle de Concorrência (Cancelamento de Builds Obsoletos)"]
+    GitPR --> Concurrency
+
+    Concurrency --> B1
+    Concurrency --> F1
 
     subgraph BackendJob["Job 1: Backend CI (ubuntu-24.04)"]
-        B1["Checkout do Código"] --> B2["Setup Python 3.12 (Cache Pip direcionado)"]
-        B2 --> B3["Atualizar pip, instalar dependências e verificar sintaxe (compileall)"]
-        B3 --> B4["Executar Testes com Pytest (Isolamento de Banco SQLite)"]
-        B4 --> B5["Persistir Relatório JUnit XML via actions/upload-artifact@v6"]
+        direction TB
+        B1["Checkout do Código"]
+        B2["Setup Python 3.12 (Cache Pip direcionado)"]
+        B3["Atualizar pip, instalar dependências e verificar sintaxe (compileall)"]
+        B4["Executar Testes com Pytest (Isolamento de Banco SQLite)"]
+        B5["Persistir Relatório JUnit XML via actions/upload-artifact@v6"]
+
+        B1 --> B2 --> B3 --> B4 --> B5
     end
 
     subgraph FrontendJob["Job 2: Frontend CI (ubuntu-24.04)"]
-        F1["Checkout do Código"] --> F2["Setup Node.js 22.20.0 (Cache NPM direcionado)"]
-        F2 --> F3["Instalação Determinística com npm ci"]
-        F3 --> F4["Verificação de Tipos TypeScript (tsc --noEmit)"]
-        F4 --> F5["Build de Produção com Vite (transpilação esbuild + empacotamento)"]
+        direction TB
+        F1["Checkout do Código"]
+        F2["Setup Node.js 22.20.0 (Cache NPM direcionado)"]
+        F3["Instalação Determinística com npm ci"]
+        F4["Verificação de Tipos TypeScript (tsc --noEmit)"]
+        F5["Build de Produção com Vite (transpilação esbuild + empacotamento)"]
+
+        F1 --> F2 --> F3 --> F4 --> F5
     end
 
-    Concurrency --> BackendJob
-    Concurrency --> FrontendJob
-
-    BackendJob --> Status["Aprovação e Relatório de Integridade"]
-    FrontendJob --> Status
+    B5 --> Status["Aprovação e Relatório de Integridade: PASSING (Verde)"]
+    F5 --> Status
 ```
 
 ### 1.2 Detalhamento Técnico dos Jobs Automatizados
@@ -267,17 +276,20 @@ O runner local deve terminar com `Resultado: todas as ... etapas foram concluíd
 
 ### 2.1 O que é Integração Contínua (CI)?
 
-Imagine que você e um grupo de colegas estão escrevendo um livro juntos. Se cada um passar meses escrevendo seus capítulos sozinho no próprio computador e deixar para juntar todos os textos apenas no dia da entrega final, o resultado previsível será o caos: capítulos com estilos de escrita conflitantes, termos técnicos usados de formas contraditórias, repetições de parágrafos e horas intermináveis gastas tentando formatar o arquivo final.
+> *"Imagine que você e um colega estão montando juntos um quebra-cabeça de mil peças em salas separadas. De vez em quando, vocês precisam juntar as peças sobre uma única mesa para verificar se o desenho ainda faz sentido. Se vocês esperarem semanas para juntar tudo, encontrar onde as peças não se encaixam será demorado e estressante."*
+
+Imagine também que você e um grupo de colegas estão escrevendo um livro juntos. Se cada um passar meses escrevendo seus capítulos sozinho no próprio computador e deixar para juntar todos os textos apenas no dia da entrega final, o resultado previsível será o caos: capítulos com estilos de escrita conflitantes, termos técnicos usados de formas contraditórias, repetições de parágrafos e horas intermináveis gastas tentando formatar o arquivo final.
 
 No desenvolvimento de software acontece exatamente a mesma coisa. Quando múltiplos programadores passam semanas trabalhando isoladamente em seus computadores ("na minha máquina funciona"), a tarefa de juntar todas as partes ao final — chamada de integração — costuma ser extremamente dolorosa e repleta de falhas inesperadas.
 
-A **Integração Contínua (do inglês *Continuous Integration* ou simplesmente *CI*)** é a prática de **integrar e testar o código frequentemente** — várias vezes ao dia. Em vez de esperar pelo fim do semestre ou da sprint, cada pequena melhoria ou correção feita no código é enviada para um repositório central compartilhado (como o GitHub). Assim que o código chega, um sistema automatizado entra em ação imediatamente, simulando um computador limpo e neutro que:
-1. Baixa o código recém-enviado;
-2. Instala todas as dependências e ferramentas necessárias;
-3. Executa baterias de testes automatizados para verificar se as regras do sistema continuam funcionando;
-4. Compila a aplicação para ter certeza de que nenhuma tela ou componente visual quebrou.
+A **Integração Contínua (do inglês *Continuous Integration* ou simplesmente *CI*)** funciona exatamente como um **inspetor automatizado e amigável**. Em vez de esperar pelo fim do semestre ou da sprint, cada pequena melhoria ou correção feita no código é enviada para um repositório central compartilhado (como o GitHub). Toda vez que alguém da equipe envia código (via `git push`), a nuvem acorda um computador virtual limpo e neutro que executa quatro verificações cruciais:
 
-Se tudo passar com sucesso, uma luz verde (badge de aprovação) é acesa. Se algo quebrar, a equipe recebe um alerta imediato indicando a linha exata e o teste que falhou, permitindo que o problema seja corrigido em minutos, e não em semanas.
+1. **O código compila sem erros?** (Verificação de sintaxe básica com `compileall`).
+2. **As regras de negócio continuam funcionando?** (Os 79 testes automatizados rodam no Pytest em poucos segundos).
+3. **Os tipos e interfaces estão consistentes?** (O TypeScript com `tsc --noEmit` confere se o frontend fala a mesma língua dos contratos da API).
+4. **O sistema está pronto para ser empacotado para o usuário final?** (O Vite monta e valida o pacote de produção de 3.682 módulos).
+
+Se tudo passar, recebemos o famoso **Badge Verde (*passing*)**. Se algo quebrar, a equipe recebe um alerta imediato com a linha exata que falhou, permitindo a correção antes que qualquer usuário perceba. Para quem está aprendendo a programar, a CI elimina o medo de errar e substitui o clássico *"mas na minha máquina funcionava"* por uma garantia matemática de qualidade e colaboração.
 
 ### 2.2 Por que a Integração Contínua é Tão Importante para Quem Está Aprendendo a Programar?
 
@@ -393,7 +405,18 @@ O sistema adota os princípios da **Clean Architecture (4 Camadas no Backend)** 
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.1 Estrutura de Diretórios do Repositório
+### 5.1 Matriz de Camadas e Justificativas Tecnológicas
+
+| Camada | Tecnologia | Papel e Justificativa |
+| :--- | :--- | :--- |
+| **Backend Core** | Python 3.12 Puro | Clean Architecture em 4 Camadas (`domain`, `application`, `infrastructure`, `presentation`) sem dependências externas pesadas. |
+| **Banco de Dados** | SQLite 3 | Banco relacional físico transacional com 12 tabelas, 11 índices e conformidade ACID. |
+| **Exposição REST** | HTTPServer Nativo | Servidor multithreaded com suporte a CORS e documentação viva no padrão OpenAPI 3.0.3 / Swagger UI. |
+| **Frontend SPA** | React 18 + Vite 6 | Single Page Application de alta fidelidade com TypeScript 5, Tailwind CSS v4 e Lucide Icons. |
+| **Acessibilidade** | WCAG 2.1 AA | Barra de acessibilidade fixa, contraste 7:1, zoom em `rem` (80%-140%) e navegação completa por teclado. |
+| **Automação CI** | GitHub Actions | Esteira de integração contínua na nuvem com runners Ubuntu 24.04 e cache otimizado para pip e npm. |
+
+### 5.2 Estrutura de Diretórios do Repositório
 
 ```text
 pi_4_ep_1/
@@ -416,9 +439,13 @@ pi_4_ep_1/
 │   ├── GUIA_COMMITS_AUTORIA.md        # Passo a passo de commits, autoria e publicação no GitHub
 │   ├── swagger.html                   # Interface estática da documentação OpenAPI
 │   ├── assets/                        # Diagramas, wireframes e protótipos de alta fidelidade
-│   │   └── ci/                        # (a criar) Prints de evidência da aba Actions, artefatos e badge
+│   │   └── ci/                        # Evidências do pipeline, artefatos e badge
+│   ├── pi2-ep2/                       # Modelagem Relacional e CLI
+│   ├── pi2-ep3/                       # Protótipo Funcional e Regras de Negócio
+│   ├── pi3-ep1/                       # Requisitos e Prototipagem
 │   ├── pi3-ep2/                       # Modelo Arquitetural
-│   └── pi3-ep3/                       # MVP Web Funcional
+│   ├── pi3-ep3/                       # MVP Web Funcional
+│   └── pi4-ep1-atual/                 # Entrega Atual: Configuração de CI com GitHub Actions
 │
 ├── backend/                           # Servidor Python sob Clean Architecture
 │   ├── main.py                        # Ponto de entrada do servidor REST / CLI
@@ -451,9 +478,20 @@ pi_4_ep_1/
 * **Gerenciador de pacotes:** `npm` (o repositório versiona `package-lock.json`; use `npm ci` para reproduzir o CI).
 * **Git:** Para versionamento e controle de branches.
 
-### 6.2 Execução Passo a Passo
+### 6.2 Execução Automatizada via Orquestrador Local (`ci_local.py`)
 
-#### 1. Backend (Python 3.12)
+Para reproduzir localmente exatamente os mesmos 4 passos executados na nuvem antes de enviar qualquer commit:
+
+```powershell
+# A partir da raiz do repositório:
+python scripts/ci_local.py
+```
+
+O script validará a compilação Python (`compileall`), os 79 testes no Pytest com exportação do JUnit XML, a verificação de tipos estáticos (`tsc --noEmit`) e a compilação de produção do Vite (`npm run build`).
+
+### 6.3 Execução Manual dos Componentes do Sistema
+
+#### 1. Backend RESTful (Python 3.12)
 Em um terminal na raiz do projeto:
 ```powershell
 # 1. Criar e ativar o ambiente virtual:
@@ -469,18 +507,51 @@ cd backend
 python main.py
 ```
 
+- **API REST:** `http://localhost:8000/api`
+- **Swagger UI Live:** `http://localhost:8000/docs`
+- **Healthcheck:** `http://localhost:8000/api/health`
+
 #### 2. Frontend SPA (React 18 + Vite)
-Em um segundo terminal aberto na pasta `frontend`:
+Em um segundo terminal (a partir da raiz do repositório):
 ```powershell
-# 1. Instalar as dependências via npm ci (ou npm install):
+# 1. Navegar até a pasta do frontend:
+cd frontend
+
+# 2. Instalar as dependências via npm ci (ou npm install):
 npm ci
 
-# 2. Iniciar o servidor de desenvolvimento:
+# 3. Iniciar o servidor de desenvolvimento:
 npm run dev
 ```
 
-Acesse no navegador: `http://localhost:5173`.  
-A documentação interativa Swagger UI estará disponível em: `http://localhost:5173/docs`.
+- **Aplicação Web:** `http://localhost:5173`
+- **Documentação Técnica na Íntegra:** Acesse a aplicação e clique no botão **Modo Desenvolvedor** no topo da tela.
+
+#### 3. Execução da Suíte Completa de Testes
+
+```powershell
+# Na raiz do projeto:
+python -m pytest -v --junitxml=reports/pytest-results.xml
+```
+
+#### 4. Nota de Engenharia: Diferença entre `npm ci` e `npm install`
+
+A equipe adota o **`npm ci`** (*Clean Install*) como padrão nas instruções e nos fluxos de automação. Abaixo destaca-se a justificativa técnica dessa decisão:
+
+| Critério | `npm install` | `npm ci` (*Clean Install*) |
+| :--- | :--- | :--- |
+| **Finalidade Principal** | Instalação cotidiana e adição/atualização de pacotes. | Instalação limpa, estrita e reproduzível para esteiras de CI e produção. |
+| **Arquivo Prioritário** | Lê o `package.json` e resolve versões compatíveis mais recentes. | Lê **estritamente** o `package-lock.json` como fonte única da verdade. |
+| **Alteração do Lockfile** | **Sim.** Pode alterar o `package-lock.json` caso surjam novas subversões. | **Não, nunca.** Mantém o `package-lock.json` 100% inalterado. |
+| **Validação de Integridade** | Atualiza o lockfile silenciosamente caso haja divergências. | **Falha defensivamente** caso o `package-lock.json` divirja do `package.json`. |
+| **Tratamento de `node_modules`** | Apenas sobrescreve ou adiciona arquivos faltantes. | **Remove completamente** a pasta `node_modules` antes da instalação. |
+| **Performance e Velocidade** | Mais lento (calcula a árvore e consulta o registro do NPM). | **Até 2x a 3x mais rápido** (apenas descompacta as versões travadas). |
+
+> [!TIP]
+> **Quando usar cada comando?**
+>
+> - Utilize **`npm ci`** em pipelines de Integração Contínua (GitHub Actions), ao clonar o projeto pela primeira vez ou antes de gerar o pacote de produção (`npm run build`), garantindo determinismo e eliminando o erro *"na minha máquina funcionava"*.
+> - Utilize **`npm install`** exclusivamente quando desejar adicionar uma nova biblioteca ao projeto ou atualizar intencionalmente as versões do `package.json`.
 
 ---
 
@@ -547,4 +618,10 @@ O desenvolvimento do processo de Integração Contínua (CI) com GitHub Actions 
 A divisão acima está registrada no histórico do Git em **cinco commits**: um **upload geral compartilhado** (estrutura, documentação histórica e assets), assinado pelos dois, e quatro commits individuais por área (UI/UX, CI/backend, README e relatório/plano), com autor definido pelo e-mail verificado nas contas GitHub. O `push` pode ser feito por qualquer integrante sem alterar a autoria registrada. Detalhes na Seção 1.6 do [`RELATORIO_FINAL_PI4_EP1.md`](RELATORIO_FINAL_PI4_EP1.md).
 
 O passo a passo completo (identidades, comandos, verificação, publicação e correção de autoria) está em [`docs/GUIA_COMMITS_AUTORIA.md`](docs/GUIA_COMMITS_AUTORIA.md). A mesma divisão consta na Seção 1.6 do [`RELATORIO_FINAL_PI4_EP1.md`](RELATORIO_FINAL_PI4_EP1.md).
+
+---
+
+## 🏆 9. Conclusão
+
+O **Entregável Parcial 1 (EP1)** atende integralmente a todas as exigências das disciplinas de **Projeto Integrado 4** e **Integração de Sistemas**, entregando uma base de software atual, testada, documentada e guardada por uma esteira de automação contínua de padrão profissional.
 

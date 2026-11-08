@@ -1,0 +1,188 @@
+===============================================================================
+UNIVERSIDADE FEDERAL DO CARIRI (UFCA)
+Centro de Educação a Distância (CEAD)
+Curso: Análise e Desenvolvimento de Sistemas (ADS)
+Disciplina: PROJETO INTEGRADO IV [ADS0048]
+Disciplina Integrada: INTEGRAÇÃO DE SISTEMAS
+
+ENTREGÁVEL PARCIAL 1 (EP1) — ARQUITETURA DE CI/CD E SISTEMA TRACES
+===============================================================================
+
+ESTUDANTES:
+- Nome: Antonio Alex Dayson Tomaz | Matrícula: 2023009790
+- Nome: Maria Alexsandra Tomaz    | Matrícula: 2023018799
+
+Data de Homologação: 02/11/2026
+Status da Entrega: ✅ 100% HOMOLOGADO NO GITHUB ACTIONS (Pipeline CI Verde · 79 Testes Pytest · Build Vite · Relatório JUnit XML Persistido · 13 Evidências Reais)
+
+-------------------------------------------------------------------------------
+1. VISÃO GERAL DA ARQUITETURA E ESTEIRA DE INTEGRAÇÃO CONTÍNUA
+-------------------------------------------------------------------------------
+O TrAcEs (Trilha de Acompanhamento Escolar) é uma plataforma digital integrada 
+para gestão acadêmica e acompanhamento contínuo da vida escolar. No EP1 do 
+Projeto Integrado 4 (em sinergia com Integração de Sistemas), o sistema foi 
+dotado de um pipeline automatizado de Integração Contínua (CI) no GitHub Actions, 
+garantindo governança de código, verificação sintática, testes e compilação.
+
++-----------------------------------------------------------------------------+
+|                     ESTEIRA DE INTEGRAÇÃO CONTÍNUA (CI)                     |
++-------------------------------------+---------------------------------------+
+|        JOB BACKEND (PYTHON 3.12)    |        JOB FRONTEND (NODE.JS 22)      |
+|  - Runner Ubuntu 24.04              |  - Runner Ubuntu 24.04                |
+|  - Cache pip (requirements.txt)     |  - Cache npm (package-lock.json)      |
+|  - compileall (Sintaxe Python)      |  - npm ci (Instalação Determinística) |
+|  - Pytest 79 testes automatizados   |  - tsc --noEmit (Tipos TypeScript)    |
+|  - Isolamento SQLite (tmp_path)     |  - vite build (3.682 módulos)         |
+|  - Relatório JUnit XML Persistido   |  - Chunks otimizados para produção    |
++-------------------------------------+---------------------------------------+
+|          STATUS DO WORKFLOW: PASSING (Aprovado com Sucesso na Nuvem)        |
++-----------------------------------------------------------------------------+
+
+-------------------------------------------------------------------------------
+2. ORQUESTRADOR LOCAL DE CI (scripts/ci_local.py)
+-------------------------------------------------------------------------------
+Para permitir que a equipe discente valide deterministicamente as 4 etapas de 
+integração contínua antes de qualquer envio ao repositório remoto, foi 
+implementado o orquestrador multiplataforma scripts/ci_local.py, que executa:
+1. python -m compileall -q backend/src backend/main.py
+2. python -m pytest -v --junitxml=reports/pytest-results.xml
+3. npm run typecheck (tsc --noEmit)
+4. npm run build (vite build)
+
+-------------------------------------------------------------------------------
+3. ESTRUTURA EM CAMADAS DO BACKEND (CLEAN ARCHITECTURE)
+-------------------------------------------------------------------------------
+O backend foi arquitetado com separação estrita de conceitos e dependências 
+apontando exclusivamente para o centro (Domínio):
+
+[ CAMADA 1: DOMÍNIO & REGRAS PURAS ] (backend/src/domain/models.py)
+  - Entidades de Domínio: Student, Teacher, Parent, Classroom, Assessment, Grade, Attendance, ReportCard.
+  - Enums Fortemente Tipados: Bimester (PRIMEIRO..QUARTO), Shift (MANHA..NOITE), AssessmentType (PROVA..SEMINARIO).
+  - Invariantes de Negócio: Validação algorítmica de CPF (dígitos verificadores), validação de e-mails RFC 5322, notas [0.0 a 10.0].
+
+[ CAMADA 2: APLICAÇÃO & SERVIÇOS ] (backend/src/application/services.py)
+  - ServicosDoAluno: Cálculo de médias bimestrais ponderadas por pesos, cálculo de média anual, consolidação de boletins e extratos de presença.
+  - ServicosSecretaria: Matrícula de estudantes, enturmação e vinculação socioafetiva N:N de responsáveis.
+
+[ CAMADA 3: INFRAESTRUTURA & PERSISTÊNCIA ] (backend/src/infrastructure/database.py & schema.sql)
+  - Banco de Dados Relacional: SQLite 3 com 12 tabelas físicas e 11 índices de performance.
+  - Padrão Repository: StudentRepository, GradeRepository, AssessmentRepository, ClassroomRepository, AttendanceRepository, AnnouncementRepository.
+  - Integridade Referencial: FOREIGN KEY com ON DELETE CASCADE e restrições CHECK.
+
+[ CAMADA 4: APRESENTAÇÃO & API RESTful ] (backend/src/presentation/server.py, controllers.py, openapi_spec.py)
+  - Servidor Nativo: HTTPServer multithreaded assíncrono com suporte a CORS, roteamento dinâmico e tratamento de erros 400/404/500 em JSON (18 rotas).
+  - Controladores Desacoplados: AuthController, ParentController, TeacherController.
+  - Documentação OpenAPI 3.0.3: Swagger UI interativo disponível em /docs e /swagger.
+
+-------------------------------------------------------------------------------
+4. MANUAL DE ENGENHARIA DA API RESTFUL (18 ENDPOINTS DOCUMENTADOS)
+-------------------------------------------------------------------------------
+[MÓDULO SISTEMA & AUTENTICAÇÃO]
+1. GET  /api/health
+   - Retorna o status de integridade do servidor backend e links da documentação.
+2. POST /api/auth/login
+   - Autentica usuários (Responsável ou Docente) e retorna token JWT mock e perfil RBAC.
+
+[MÓDULO DO RESPONSÁVEL LEGAL - FAMÍLIA]
+3. GET  /api/parent/dependents?parent_id=1
+   - Retorna resumo sintético de médias, faltas e alertas dos 3 dependentes (João Silva, Ana Silva, Pedro Costa).
+4. GET  /api/students/{id}/report-card?year=2026
+   - Retorna o boletim escolar anual completo dos 4 bimestres com cálculo de aprovação.
+5. GET  /api/students/{id}/assessments?subject=Matemática&year=2026
+   - Retorna notas detalhadas por avaliação (Avaliação 1, Avaliação 2) em modo 100% somente leitura.
+6. GET  /api/students/{id}/attendance?subject=Matemática&month=3&year=2026
+   - Retorna extrato de frequência mensal e grade de calendário com status tátil [P], [F] e [F*].
+7. GET  /api/parent/announcements
+   - Retorna mural de comunicados da instituição com ordenação cronológica decrescente.
+8. POST /api/parent/announcements/{id}/read
+   - Confirma a leitura do aviso pelo responsável legal, sincronizando com o SQLite.
+
+[MÓDULO DO CORPO DOCENTE - PROFESSOR]
+9.  GET  /api/teacher/classes?teacher_id=1
+    - Retorna escopo de turmas, disciplinas lecionadas e estudantes matriculados com matrículas.
+10. GET  /api/teacher/assessments?subject=Matemática&bimester=PRIMEIRO&year=2026
+    - Retorna listagem sequencial de avaliações criadas por escopo.
+11. PUT  /api/teacher/assessments/{id}
+    - Atualiza atributos de uma avaliação existente (título, tipo, peso, descrição) com recálculo instantâneo.
+12. POST /api/teacher/assessments/add
+    - Cria nova avaliação sequencial para toda a turma.
+13. POST /api/teacher/grades/bulk
+    - Grava em lote as notas digitadas pelo professor diretamente no SQLite.
+14. POST /api/teacher/attendance/bulk
+    - Grava chamada diária em lote com registro de presenças e justificativas de faltas.
+15. GET  /api/teacher/announcements
+    - Lista avisos e comunicados gerenciados pelo corpo docente com status de leitura pelos responsáveis.
+16. POST /api/teacher/announcements
+    - Cadastra e publica aviso no mural com remetente formal e tags customizadas.
+17. PUT  /api/teacher/announcements/{id}
+    - Edita comunicado existente previamente publicado pelo docente.
+18. GET  /openapi.json
+    - Especificação JSON completa da API no padrão OpenAPI 3.0.3.
+
+-------------------------------------------------------------------------------
+5. MODELO FÍSICO DE DADOS (SQLITE 3 — 12 TABELAS E 11 ÍNDICES)
+-------------------------------------------------------------------------------
++-----------------------------------------------------------------------------+
+|                                ESQUEMA FÍSICO DDL                           |
++-----------------------------------------------------------------------------+
+| 1. students:              (id PK, registration UNIQUE, name, email, cpf)    |
+| 2. parents:               (id PK, name, email, phone, cpf, address)         |
+| 3. teachers:              (id PK, name, email, cpf, registration)           |
+| 4. classrooms:            (id PK, name, shift, education_level, teacher_id) |
+| 5. classroom_enrollments: (student_id FK, classroom_id FK, enrolled_at)    |
+| 6. student_parent:        (student_id FK, parent_id FK, relationship_type)  |
+| 7. teacher_subjects:      (teacher_id FK, subject, academic_year)           |
+| 8. assessments:           (assessment_id PK, title, type, weight, bimester) |
+| 9. grades:                (grade_id PK, student_id FK, assessment_id FK)    |
+| 10. attendance:           (attendance_id PK, student_id FK, date, status)   |
+| 11. announcements:        (announcement_id PK, title, category, tags, etc.) |
+| 12. report_cards:         (report_id PK, student_id FK, academic_year)      |
++-----------------------------------------------------------------------------+
+
+Índices Relacionais Otimizados (11):
+- idx_grades_student_bimester, idx_attendance_date, idx_student_parent,
+  idx_classrooms_teacher, idx_enrollments_student, idx_assessments_scope,
+  idx_announcements_target, etc.
+
+-------------------------------------------------------------------------------
+6. ACESSIBILIDADE DIGITAL EM SPA (WCAG 2.1 AA) E HEURÍSTICAS DE JAKOB NIELSEN
+-------------------------------------------------------------------------------
+- WCAG 1.4.3 / 1.4.11: Contraste superior a 4,5:1 (Padrão), 7:1 (Alto Contraste) e prefers-contrast: more.
+- WCAG 1.4.1: Codificação semântica tripla (Cor de alto contraste + Ícone SVG + Texto explícito).
+- WCAG 1.4.4: Seletor A+/A- na Barra de Acessibilidade (80% a 140% em rem) e zoom livre (user-scalable=yes).
+- WCAG 2.1.2: Focus Trap cíclico em todos os modais (Tab / Shift+Tab) e restauração de foco ao fechar.
+- WCAG 2.3.3: Respeito a prefers-reduced-motion: reduce desativando animações bruscas.
+- WCAG 2.4.1: Skip Links no topo (#main-content, #main-nav, #footer) e Barra Fixa permanente (sticky top-0 z-50).
+- WCAG 2.4.3: Gerenciamento ativo de foco para <main id="main-content">.
+- WCAG 2.5.5: Alvos de toque mínimos de 44x44px em botões, links e controles.
+- WCAG 4.1.3: ARIA Live Region global (aria-live="polite") e sinalizadores aria-busy="true".
+- Nielsen #1: Visibilidade do estado do sistema via Toasts de feedback assíncrono.
+- Nielsen #3: Controle e liberdade com botão "Voltar ao Painel" e tecla Escape para modais.
+- Nielsen #5: Prevenção de erros com modal obrigatório de confirmação antes de gravar no SQLite.
+- Nielsen #9: Reconhecimento e recuperação de erros com validação visual imediata.
+
+-------------------------------------------------------------------------------
+7. VALIDAÇÃO DA QUALIDADE E SUÍTE DE TESTES (PYTEST)
+-------------------------------------------------------------------------------
+A suíte completa de testes automatizados conta com 79 testes executados com 100% de sucesso:
+- tests/unit/test_cpf_validation.py (6 testes)
+- tests/unit/test_entities.py (30 testes)
+- tests/unit/test_passing_grade.py (3 testes)
+- tests/integration/test_integrity.py (5 testes)
+- tests/integration/test_manual_repositories.py (16 testes)
+- tests/test_api_endpoints.py (17 testes, incluindo OpenAPI, PUT de notas e CRUD de avisos)
+- test_2nd_bimester_launch.py (1 teste E2E)
+- test_4_bimesters_launch.py (1 teste E2E)
+
+TOTAL: 79 APROVADOS (0 falhas, 0 erros) em ~4.2 segundos.
+Relatório Persistido: reports/pytest-results.xml (JUnit XML publicado no CI)
+
+-------------------------------------------------------------------------------
+8. CONCLUSÃO
+-------------------------------------------------------------------------------
+A arquitetura do TrAcEs (EP1) cumpre com excelência todos os requisitos do 
+entregável: robustez de Clean Architecture no backend, alta fidelidade e 
+acessibilidade no frontend SPA React, segurança transacional em SQLite 3, 
+especificação padronizada OpenAPI 3.0.3 e uma esteira automatizada de 
+Integração Contínua (CI) com GitHub Actions 100% aprovada na nuvem.
+===============================================================================

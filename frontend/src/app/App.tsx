@@ -133,7 +133,7 @@ function AccessibilityBar({
           <Sep />
           <button
             aria-label="Recursos de acessibilidade"
-            className="px-2 py-0.5 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 flex items-center gap-1 hover:underline hidden xs:flex"
+            className="px-2 py-0.5 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 items-center gap-1 hover:underline hidden xs:flex"
           >
             <Accessibility size={13} aria-hidden />
             Acessibilidade
@@ -5307,12 +5307,49 @@ function parseMathExpression(expr: string): string {
 function parseInlineMarkdown(text: string): React.ReactNode {
   if (!text) return text;
 
-  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\$\$?[^$]+\$\$?)/g;
+  const regex = /(\[!\[[^\]]*\]\([^)]+\)\]\([^)]+\)|!\[[^\]]*\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\$\$?[^$]+\$\$?)/g;
   const parts = text.split(regex);
 
   if (parts.length === 1) return text;
 
   return parts.map((part, index) => {
+    // 1. Badge / Imagem com link: [![alt](img_url)](target_url)
+    if (part.startsWith("[![") && part.includes("](") && part.endsWith(")")) {
+      const match = part.match(/^\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)$/);
+      if (match) {
+        const [, alt, imgUrl, targetUrl] = match;
+        return (
+          <a
+            key={index}
+            href={targetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mr-1.5 my-0.5 align-middle hover:opacity-90 transition-opacity"
+            title={alt}
+          >
+            <img src={imgUrl} alt={alt || "Badge"} className="inline-block h-5 max-w-full align-middle" loading="lazy" />
+          </a>
+        );
+      }
+    }
+
+    // 2. Imagem / Badge autônomo: ![alt](img_url)
+    if (part.startsWith("![") && part.includes("](") && part.endsWith(")")) {
+      const match = part.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      if (match) {
+        const [, alt, imgUrl] = match;
+        return (
+          <img
+            key={index}
+            src={imgUrl}
+            alt={alt || "Badge"}
+            className="inline-block h-5 max-w-full mr-1.5 my-0.5 align-middle"
+            loading="lazy"
+          />
+        );
+      }
+    }
+
     if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
       return (
         <strong key={index} className="font-bold text-[#1A2332]">
@@ -5639,6 +5676,11 @@ function SimpleMarkdownViewer({ content }: { content: string }) {
 
     const trimmed = line.trim();
 
+    // Ignorar comentários HTML (como <!-- markdownlint-disable -->)
+    if (trimmed.startsWith("<!--")) {
+      return;
+    }
+
     if (trimmed.startsWith("# ")) {
       elements.push(<h1 key={idx} className="text-2xl font-bold text-[#1A2332] font-['Source_Serif_4'] mt-6 mb-3 border-b border-[#CBD5E1] pb-2">{parseInlineMarkdown(trimmed.replace(/^#\s+/, ""))}</h1>);
     } else if (trimmed.startsWith("## ")) {
@@ -5672,6 +5714,12 @@ function SimpleMarkdownViewer({ content }: { content: string }) {
       );
     } else if (trimmed === "---") {
       elements.push(<hr key={idx} className="my-6 border-[#CBD5E1]" />);
+    } else if (trimmed.startsWith("![") || trimmed.startsWith("[![")) {
+      elements.push(
+        <div key={idx} className="flex flex-wrap items-center gap-1.5 my-2.5">
+          {parseInlineMarkdown(trimmed)}
+        </div>
+      );
     } else if (trimmed.length > 0) {
       elements.push(<p key={idx} className="text-xs sm:text-sm text-[#4A5568] leading-relaxed my-2">{parseInlineMarkdown(line)}</p>);
     }
@@ -5683,34 +5731,126 @@ function SimpleMarkdownViewer({ content }: { content: string }) {
 }
 
 function DocsMarkdownScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const docsList = [
-    { key: "EP3_README.md", title: "EP3_README.md — Guia Mestre de Execução e Arquitetura" },
-    { key: "EP3_ARQUITETURA.md", title: "EP3_ARQUITETURA.md — Especificação Técnica da Arquitetura" },
-    { key: "EP3_INDICE.md", title: "EP3_INDICE.md — Catálogo e Índice Executivo" },
-    { key: "DESCRICAO_DO_PROJETO_pi3-ep3.md", title: "DESCRICAO_DO_PROJETO_pi3-ep3.md — Inventário Físico e Volumetria" },
-    { key: "RELATORIO_ATENDIMENTO_REQUISITOS-pi3-ep3.md", title: "RELATORIO_ATENDIMENTO_REQUISITOS-pi3-ep3.md — Atendimento de Requisitos" },
-    { key: "RELATORIO_MVP_WEB_FUNCIONAL.md", title: "RELATORIO_MVP_WEB_FUNCIONAL.md — Relatório Executivo de Entrega" },
-    { key: "relatorio_tecnologias_frontend_projeto.md", title: "relatorio_tecnologias_frontend_projeto.md — Especificação do Frontend" },
-    { key: "relatorio-arquitetura-ep3-v1.txt", title: "relatorio-arquitetura-ep3-v1.txt — Síntese da Arquitetura em Texto" },
+  const DELIVERIES = [
+    { id: "pi4-ep1", label: "pi4-ep1 (Atual — CI/CD com GitHub Actions)" },
+    { id: "pi3-ep3", label: "pi3-ep3 (MVP Web Funcional)" },
+    { id: "pi3-ep2", label: "pi3-ep2 (Modelo Arquitetural)" },
+    { id: "pi3-ep1", label: "pi3-ep1 (Requisitos e Prototipagem)" },
+    { id: "pi2-ep3", label: "pi2-ep3 (Protótipo Funcional e Regras de Negócio)" },
+    { id: "pi2-ep2", label: "pi2-ep2 (Modelagem Relacional e CLI)" },
   ];
 
-  const [selectedDocKey, setSelectedDocKey] = useState<string>("EP3_README.md");
+  const DEFAULT_DOC_BY_DELIVERY: Record<string, string> = {
+    "pi4-ep1": "EP1_README.md",
+    "pi4-ep1-atual": "EP1_README.md",
+    "pi3-ep3": "EP3_README.md",
+    "pi3-ep3-atual": "EP3_README.md",
+    "pi3-ep2": "README-v-ep2.md",
+    "pi3-ep1": "README-PI3-EP1.md",
+    "pi2-ep3": "README.md",
+    "pi2-ep2": "README.md",
+  };
+
+  const DELIVERY_FOLDER_MAP: Record<string, string> = {
+    "pi4-ep1": "pi4-ep1-atual",
+    "pi3-ep3": "pi3-ep3",
+    "pi3-ep2": "pi3-ep2",
+    "pi3-ep1": "pi3-ep1",
+    "pi2-ep3": "pi2-ep3",
+    "pi2-ep2": "pi2-ep2",
+  };
+
+  const DOCS_BY_DELIVERY: Record<string, { key: string; title: string }[]> = {
+    "pi4-ep1": [
+      { key: "EP1_README.md", title: "EP1_README.md — Guia Mestre de CI/CD e Execução" },
+      { key: "EP1_ARQUITETURA.md", title: "EP1_ARQUITETURA.md — Arquitetura de Software e Esteira de CI" },
+      { key: "EP1_INDICE.md", title: "EP1_INDICE.md — Catálogo e Índice Executivo" },
+      { key: "DESCRICAO_DO_PROJETO_pi4-ep1.md", title: "DESCRICAO_DO_PROJETO_pi4-ep1.md — Inventário Físico e Volumetria" },
+      { key: "RELATORIO_ATENDIMENTO_REQUISITOS-pi4-ep1.md", title: "RELATORIO_ATENDIMENTO_REQUISITOS-pi4-ep1.md — Atendimento de Requisitos" },
+      { key: "RELATORIO_MVP_WEB_FUNCIONAL.md", title: "RELATORIO_MVP_WEB_FUNCIONAL.md — Relatório de Homologação no CI" },
+      { key: "relatorio_tecnologias_frontend_projeto.md", title: "relatorio_tecnologias_frontend_projeto.md — Tecnologias Frontend e CI" },
+      { key: "relatorio-arquitetura-ep1-v1.txt", title: "relatorio-arquitetura-ep1-v1.txt — Síntese da Arquitetura e CI (ASCII)" },
+    ],
+    "pi3-ep3": [
+      { key: "EP3_README.md", title: "EP3_README.md — Guia Mestre do MVP Web" },
+      { key: "EP3_ARQUITETURA.md", title: "EP3_ARQUITETURA.md — Especificação Técnica da Arquitetura" },
+      { key: "EP3_INDICE.md", title: "EP3_INDICE.md — Catálogo e Índice Executivo" },
+      { key: "DESCRICAO_DO_PROJETO_pi3-ep3.md", title: "DESCRICAO_DO_PROJETO_pi3-ep3.md — Inventário Físico e Volumetria" },
+      { key: "RELATORIO_ATENDIMENTO_REQUISITOS-pi3-ep3.md", title: "RELATORIO_ATENDIMENTO_REQUISITOS-pi3-ep3.md — Atendimento de Requisitos" },
+      { key: "RELATORIO_MVP_WEB_FUNCIONAL.md", title: "RELATORIO_MVP_WEB_FUNCIONAL.md — Relatório Executivo de Entrega" },
+      { key: "relatorio_tecnologias_frontend_projeto.md", title: "relatorio_tecnologias_frontend_projeto.md — Especificação do Frontend" },
+      { key: "relatorio-arquitetura-ep3-v1.txt", title: "relatorio-arquitetura-ep3-v1.txt — Síntese da Arquitetura em Texto" },
+    ],
+    "pi3-ep2": [
+      { key: "README-v-ep2.md", title: "README-v-ep2.md — Guia do Modelo Arquitetural" },
+      { key: "EP2_ARQUITETURA.md", title: "EP2_ARQUITETURA.md — Especificação Arquitetural" },
+      { key: "EP2_INDICE.md", title: "EP2_INDICE.md — Catálogo e Índice do EP2" },
+      { key: "texto-do-relatorio-ep2-v1.txt", title: "texto-do-relatorio-ep2-v1.txt — Relatório Arquitetural em Texto" },
+    ],
+    "pi3-ep1": [
+      { key: "README-PI3-EP1.md", title: "README-PI3-EP1.md — Guia de Engenharia de Requisitos" },
+      { key: "PROTOTIPAGEM_WIREFRAME.md", title: "PROTOTIPAGEM_WIREFRAME.md — Wireframes e Fluxos" },
+      { key: "SITEMAP.md", title: "SITEMAP.md — Mapa do Site e Navegação" },
+      { key: "breve_descricao_das_telas.txt", title: "breve_descricao_das_telas.txt — Descrição das Telas" },
+      { key: "relatorio_prototipagem_web_alta_fidelidade.txt", title: "relatorio_prototipagem_web_alta_fidelidade.txt — Relatório de Alta Fidelidade" },
+    ],
+    "pi2-ep3": [
+      { key: "README.md", title: "README.md — Guia do Protótipo Funcional" },
+      { key: "EP3_INDICE.md", title: "EP3_INDICE.md — Catálogo e Índice Executivo" },
+      { key: "EP3_RELATORIO.md", title: "EP3_RELATORIO.md — Relatório do Protótipo Funcional" },
+      { key: "DESCRICAO_DO_PROJETO.md", title: "DESCRICAO_DO_PROJETO.md — Descrição do Projeto" },
+      { key: "PROTOTIPAGEM_WIREFRAME.md", title: "PROTOTIPAGEM_WIREFRAME.md — Wireframes e Telas" },
+      { key: "RELATORIO_ATENDIMENTO_REQUISITOS.md", title: "RELATORIO_ATENDIMENTO_REQUISITOS.md — Conformidade de Requisitos" },
+      { key: "SITEMAP.md", title: "SITEMAP.md — Mapa do Site" },
+    ],
+    "pi2-ep2": [
+      { key: "README.md", title: "README.md — Guia de Modelagem Relacional e CLI" },
+      { key: "DESCRICAO_DO_PROJETO_pi2-ep2.md", title: "DESCRICAO_DO_PROJETO_pi2-ep2.md — Descrição e DDL" },
+      { key: "RELATORIO_ATENDIMENTO_REQUISITOS-pi2-ep2.md", title: "RELATORIO_ATENDIMENTO_REQUISITOS-pi2-ep2.md — Requisitos de Banco de Dados" },
+    ],
+  };
+
+  DOCS_BY_DELIVERY["pi4-ep1-atual"] = DOCS_BY_DELIVERY["pi4-ep1"];
+  DOCS_BY_DELIVERY["pi3-ep3-atual"] = DOCS_BY_DELIVERY["pi3-ep3"];
+
+  const [selectedDelivery, setSelectedDelivery] = useState<string>("pi4-ep1");
+  const [selectedDocKey, setSelectedDocKey] = useState<string>("EP1_README.md");
   const [docContent, setDocContent] = useState<string>("Carregando documento...");
   const [copied, setCopied] = useState(false);
 
+  const currentDocs = DOCS_BY_DELIVERY[selectedDelivery] || DOCS_BY_DELIVERY["pi4-ep1"];
+  const targetFolder = DELIVERY_FOLDER_MAP[selectedDelivery] || selectedDelivery;
+
+  const handleDeliveryChange = (newDelivery: string) => {
+    setSelectedDelivery(newDelivery);
+    const defaultDoc = DEFAULT_DOC_BY_DELIVERY[newDelivery] || DOCS_BY_DELIVERY[newDelivery]?.[0]?.key || "README.md";
+    setSelectedDocKey(defaultDoc);
+  };
+
   useEffect(() => {
-    fetch(`/docs/pi3-ep3-atual/${selectedDocKey}`)
+    setDocContent("Carregando documento...");
+    fetch(`/docs/${targetFolder}/${selectedDocKey}`)
       .then((res) => {
         if (res.ok) return res.text();
-        throw new Error("Fallback");
+        const altFolder = targetFolder.endsWith("-atual")
+          ? targetFolder.replace(/-atual$/, "")
+          : `${targetFolder}-atual`;
+        return fetch(`/docs/${altFolder}/${selectedDocKey}`).then((r) => {
+          if (r.ok) return r.text();
+          throw new Error("Não encontrado");
+        });
       })
-      .then((text) => setDocContent(text))
+      .then((text) => {
+        // Remover diretivas de markdownlint (ex: <!-- markdownlint-disable -->)
+        const clean = text.replace(/^<!--\s*markdownlint-disable.*-->\s*/im, "");
+        setDocContent(clean);
+      })
       .catch(() => {
         setDocContent(
-          `# ${selectedDocKey}\n\nEste documento está localizado em \`docs/pi3-ep3-atual/${selectedDocKey}\`.\n\nPara visualizá-lo na íntegra, certifique-se de que o servidor backend ou estático esteja em execução.`
+          `# ${selectedDocKey}\n\nEste documento está localizado em \`docs/${targetFolder}/${selectedDocKey}\`.\n\nPara visualizá-lo na íntegra, certifique-se de que o servidor backend ou estático esteja em execução.`
         );
       });
-  }, [selectedDocKey]);
+  }, [selectedDelivery, selectedDocKey, targetFolder]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(docContent);
@@ -5718,7 +5858,6 @@ function DocsMarkdownScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const selectedDocObj = docsList.find((d) => d.key === selectedDocKey) || docsList[0];
 
   return (
     <main id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -5732,7 +5871,7 @@ function DocsMarkdownScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
               Documentação Técnica na Íntegra
             </h1>
             <p className="text-sm text-[#6B7A8D] mt-1">
-              Exibição íntegra e formatada dos documentos do diretório <code>docs/pi3-ep3-atual/</code>.
+              Exibição íntegra e formatada dos documentos do diretório docs.
             </p>
           </div>
 
@@ -5745,32 +5884,57 @@ function DocsMarkdownScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
           </button>
         </div>
 
-        {/* Seletor de Documentos */}
-        <div className="space-y-2">
-          <label htmlFor="doc-select" className="block text-xs font-bold text-[#1A2332] uppercase tracking-wide">
-            Selecione o Documento para Visualizar:
-          </label>
-          <div className="relative">
-            <select
-              id="doc-select"
-              value={selectedDocKey}
-              onChange={(e) => setSelectedDocKey(e.target.value)}
-              className="w-full bg-[#FAFBFD] border border-[#CBD5E1] text-[#1A2332] text-sm font-semibold rounded-lg px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
-            >
-              {docsList.map((doc) => (
-                <option key={doc.key} value={doc.key}>
-                  📄 {doc.title}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-4 top-3.5 text-[#6B7A8D] pointer-events-none" size={18} />
+        {/* Seletores: 1. Entrega / 2. Documento */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Seletor 1: Identificar a Entrega */}
+          <div className="space-y-2">
+            <label htmlFor="delivery-select" className="block text-xs font-bold text-[#1A2332] uppercase tracking-wide">
+              1. Selecione a Entrega:
+            </label>
+            <div className="relative">
+              <select
+                id="delivery-select"
+                value={selectedDelivery}
+                onChange={(e) => handleDeliveryChange(e.target.value)}
+                className="w-full bg-[#FAFBFD] border border-[#CBD5E1] text-[#1A2332] text-sm font-semibold rounded-lg px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
+              >
+                {DELIVERIES.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    📁 {d.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-3.5 text-[#6B7A8D] pointer-events-none" size={18} />
+            </div>
+          </div>
+
+          {/* Seletor 2: Documentos da Entrega Selecionada */}
+          <div className="space-y-2">
+            <label htmlFor="doc-select" className="block text-xs font-bold text-[#1A2332] uppercase tracking-wide">
+              2. Selecione o Documento:
+            </label>
+            <div className="relative">
+              <select
+                id="doc-select"
+                value={selectedDocKey}
+                onChange={(e) => setSelectedDocKey(e.target.value)}
+                className="w-full bg-[#FAFBFD] border border-[#CBD5E1] text-[#1A2332] text-sm font-semibold rounded-lg px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
+              >
+                {currentDocs.map((doc) => (
+                  <option key={doc.key} value={doc.key}>
+                    📄 {doc.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-3.5 text-[#6B7A8D] pointer-events-none" size={18} />
+            </div>
           </div>
         </div>
 
         {/* Visualizador de Markdown */}
         <div className="p-6 rounded-xl border border-[#CBD5E1] bg-white shadow-2xs">
           <div className="flex items-center justify-between border-b border-[#EEF2F7] pb-3 mb-4 text-xs text-[#6B7A8D]">
-            <span className="font-mono font-bold text-[#1B4F8A]">docs/pi3-ep3-atual/{selectedDocObj.key}</span>
+            <span className="font-mono font-bold text-[#1B4F8A]">docs/{targetFolder}/{selectedDocKey}</span>
             <span className="bg-[#EEF2F7] text-[#1A2332] px-2.5 py-0.5 rounded font-semibold">
               {docContent.split("\n").length} linhas
             </span>
